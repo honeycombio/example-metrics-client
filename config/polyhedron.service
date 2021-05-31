@@ -1,0 +1,11 @@
+[Unit]
+Description=polyhedron
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=5s
+ExecStart=/home/ubuntu/polyhedron
+
+[Install]
+WantedBy=multi-user.target

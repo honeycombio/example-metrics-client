@@ -1,0 +1,41 @@
+---
+- name: Update webservers
+  hosts: webservers
+  remote_user: ubuntu
+  tasks:
+    - name: polyhedron | copy built files
+      copy: src=../build/polyhedron-linux-amd64 dest=/home/ubuntu/polyhedron owner=ubuntu group=ubuntu mode=0770
+      notify: reload polyhedron
+    - name: polyhedron | copy service definition
+      become: true
+      copy: src=./polyhedron.service dest=/lib/systemd/system/polyhedron.service owner=ubuntu group=ubuntu mode=0644
+      notify: reload polyhedron
+    - name: polyhedron | service is running
+      become: true
+      service: name=polyhedron state=started
+  handlers:
+    - name: reload polyhedron
+      become: true
+      service: name=polyhedron state=restarted
+
+- name: Update load balancers
+  hosts: loadbalancers
+  remote_user: ubuntu
+  tasks:
+    - name: nginx | install
+      become: true
+      apt: name=nginx
+    - name: nginx | remove default server
+      become: true
+      file: path=/etc/nginx/sites-enabled/default state=absent
+    - name: nginx | add load balancer config
+      become: true
+      notify: reload nginx
+      copy: src=./nginx-load-balancer.conf dest=/etc/nginx/conf.d/load-balancer.conf mode=0644
+    - name: nginx | ensure service is running
+      become: true
+      service: name=nginx state=started
+  handlers:
+    - name: reload nginx
+      become: true
+      service: name=nginx state=reloaded

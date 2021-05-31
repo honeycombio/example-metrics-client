@@ -1,0 +1,6 @@
+[webservers]
+vm1
+vm2
+
+[loadbalancers]
+lb
