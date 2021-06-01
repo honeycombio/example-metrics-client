@@ -20,10 +20,13 @@ receivers:
             - source_labels: [__name__]
               regex: ".*grpc_io.*"
               action: drop
+  otlp:
+    protocols:
+      grpc:
 
 processors:
   resource:
-    attributes: # probably you want to add to this list. documentation here: https://github.com/open-telemetry/opentelemetry-collector/blob/main/processor/resourceprocessor/README.md
+    attributes:
       - key: host.name
         value: $HOSTNAME
         action: upsert
@@ -42,6 +45,10 @@ exporters:
 service:
   pipelines:
     metrics:
-      receivers: [hostmetrics, prometheus]
+      receivers: [hostmetrics, prometheus, otlp]
+      processors: [batch, resource]
+      exporters: [otlp, logging]
+    traces:
+      receivers: [otlp]
       processors: [batch, resource]
       exporters: [otlp, logging]
