@@ -7,6 +7,10 @@
     hny_api_key: "{{ lookup('env', 'HNY_API_KEY') }}"
   tasks:
 
+    - name: Print all available facts
+      ansible.builtin.debug:
+        var: ansible_facts
+
     - name: polyhedron server | copy built files
       copy: src=../build/polyhedron-server-linux-amd64 dest=/home/ubuntu/polyhedron owner=ubuntu group=ubuntu mode=0770
       notify: reload polyhedron
