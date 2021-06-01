@@ -1,0 +1,7 @@
+#!/bin/bash
+
+export HOSTNAME="{{ template_host }}"
+export HNY_API_KEY="{{ hny_api_key }}"
+export HNY_DATASET_NAME="polyhedron"
+
+/home/ubuntu/otelcol --config=/home/ubuntu/otelcol-config.yaml

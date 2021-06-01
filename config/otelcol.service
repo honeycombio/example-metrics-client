@@ -1,0 +1,11 @@
+[Unit]
+Description=otelcol
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=5s
+ExecStart=/home/ubuntu/otelcol-start
+
+[Install]
+WantedBy=multi-user.target

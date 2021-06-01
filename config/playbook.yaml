@@ -20,11 +20,39 @@
       become: true
       service: name=polyhedron state=started
 
+    - name: otelcol | download
+      get_url:
+        url: https://github.com/open-telemetry/opentelemetry-collector/releases/download/v0.27.0/otelcol_linux_amd64
+        dest: /home/ubuntu/otelcol
+        mode: 0770
+        checksum: sha256:d3972b89f990a1227ab18963d131bf32ec9025261f6e63f32ec32671679e62bf
+
+    - name: otelcol | copy config
+      copy: src=./otelcol-config.yaml dest=/home/ubuntu/otelcol-config.yaml owner=ubuntu group=ubuntu mode=0644
+      notify: reload otelcol
+
+    - name: otelcol | copy start script
+      template: src=./otelcol-start.j2 dest=/home/ubuntu/otelcol-start owner=ubuntu group=ubuntu mode=0774
+      notify: reload otelcol
+      
+    - name: otelcol | copy service definition
+      become: true
+      copy: src=./otelcol.service dest=/lib/systemd/system/otelcol.service owner=ubuntu group=ubuntu mode=0644
+      notify: reload otelcol
+
+    - name: otelcol | service is started
+      become: true
+      service: name=otelcol state=started
+
   handlers:
 
     - name: reload polyhedron
       become: true
       service: name=polyhedron state=restarted
+
+    - name: reload otelcol
+      become: true
+      service: name=otelcol state=restarted
 
 - name: Update load balancers
   hosts: loadbalancers

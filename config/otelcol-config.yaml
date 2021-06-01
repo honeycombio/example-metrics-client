@@ -1,0 +1,47 @@
+receivers:
+  hostmetrics: # documentation here: https://github.com/open-telemetry/opentelemetry-collector/blob/main/receiver/hostmetricsreceiver/README.md
+    collection_interval: 1m
+    scrapers:
+      cpu:
+      disk:
+      filesystem:
+      load:
+      memory:
+      network:
+      paging:
+  prometheus: # not required, but this provides metrics from opentelemetry-collector itself. Documentation here: https://github.com/open-telemetry/opentelemetry-collector/blob/main/docs/troubleshooting.md#metrics
+    config:
+      scrape_configs:
+        - job_name: "otelcol"
+          scrape_interval: 1m
+          static_configs:
+            - targets: ["0.0.0.0:8888"]
+          metric_relabel_configs:
+            - source_labels: [__name__]
+              regex: ".*grpc_io.*"
+              action: drop
+
+processors:
+  resource:
+    attributes: # probably you want to add to this list. documentation here: https://github.com/open-telemetry/opentelemetry-collector/blob/main/processor/resourceprocessor/README.md
+      - key: host.name
+        value: $HOSTNAME
+        action: upsert
+  batch:
+    timeout: 200ms
+
+exporters:
+  logging:
+    logLevel: info # set to "debug" if you'd like to see all your metrics logged to stdout too
+  otlp:
+    endpoint: "api.honeycomb.io:443"
+    headers:
+      "x-honeycomb-team": $HNY_API_KEY
+      "x-honeycomb-dataset": $HNY_DATASET_NAME
+
+service:
+  pipelines:
+    metrics:
+      receivers: [hostmetrics, prometheus]
+      processors: [batch, resource]
+      exporters: [otlp, logging]
