@@ -7,16 +7,16 @@
     hny_api_key: "{{ lookup('env', 'HNY_API_KEY') }}"
   tasks:
 
-    - name: polyhedron | copy built files
-      copy: src=../build/polyhedron-linux-amd64 dest=/home/ubuntu/polyhedron owner=ubuntu group=ubuntu mode=0770
+    - name: polyhedron server | copy built files
+      copy: src=../build/polyhedron-server-linux-amd64 dest=/home/ubuntu/polyhedron owner=ubuntu group=ubuntu mode=0770
       notify: reload polyhedron
 
-    - name: polyhedron | copy service definition
+    - name: polyhedron server | copy service definition
       become: true
       copy: src=./polyhedron.service dest=/lib/systemd/system/polyhedron.service owner=ubuntu group=ubuntu mode=0644
       notify: reload polyhedron
 
-    - name: polyhedron | service is running
+    - name: polyhedron server | service is running
       become: true
       service: name=polyhedron state=started
 
