@@ -8,20 +8,29 @@ import (
 	"time"
 )
 
+func randomWithinRange(min int, max int) int {
+	return rand.Intn(max-min) + min
+}
+
+func generateRollCommand() string {
+	return fmt.Sprintf("%dd%d", randomWithinRange(1, 100), randomWithinRange(1, 20))
+}
+
 func request() {
-	resp, err := http.Get("http://polyhedron/2d6")
+	endpoint := fmt.Sprintf("http://polyhedron/%s", generateRollCommand())
+	resp, err := http.Get(endpoint)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return
 	}
 
 	defer resp.Body.Close()
-	_, err = io.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return
 	}
-	// fmt.Printf("Result: %s\n", string(body))
+	fmt.Printf("Result: %s\n", string(body))
 }
 
 func main() {
