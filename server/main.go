@@ -15,14 +15,16 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpgrpc"
 	metricglobal "go.opentelemetry.io/otel/metric/global"
-	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
+	metriccontroller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
+	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/semconv"
 	"go.opentelemetry.io/otel/trace"
 )
 
-func roll(w http.ResponseWriter, req *http.Request) {
+func handleRoll(w http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
 	span := trace.SpanFromContext(ctx)
 
@@ -34,7 +36,6 @@ func roll(w http.ResponseWriter, req *http.Request) {
 	ctx = baggage.ContextWithValues(ctx, nameKey.String("roll"))
 
 	span.SetAttributes(nameKey.String("roll"), dieRequestKey.String(req.URL.Path))
-
 	w.Header().Add("Content-Type", "text/html")
 
 	if req.URL.Path == "/" {
@@ -73,15 +74,13 @@ func main() {
 	}
 	defer shutdownMetrics()
 
-	if err := runtime.Start(runtime.WithMinimumReadMemStatsInterval(time.Second)); err != nil {
-		panic(err)
-	}
-
-	http.Handle("/", otelhttp.NewHandler(http.HandlerFunc(roll), "Roll"))
+	http.Handle("/", otelhttp.NewHandler(http.HandlerFunc(handleRoll), "Roll"))
 	if err = http.ListenAndServe(":8090", nil); err != nil {
 		panic(err)
 	}
 }
+
+var webserverResource = resource.NewWithAttributes(semconv.ServiceNameKey.String("webserver"))
 
 func createMetricsExporter(ctx context.Context) (*otlp.Exporter, error) {
 	return otlp.NewExporter(ctx, otlpgrpc.NewDriver(
@@ -93,7 +92,11 @@ func createMetricsExporter(ctx context.Context) (*otlp.Exporter, error) {
 
 func setupTraces(ctx context.Context, exporter *otlp.Exporter) (func(), error) {
 	bsp := sdktrace.NewBatchSpanProcessor(exporter)
-	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(bsp))
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithSampler(sdktrace.AlwaysSample()),
+		sdktrace.WithSpanProcessor(bsp),
+		sdktrace.WithResource(webserverResource),
+	)
 	otel.SetTracerProvider(tp)
 	return func() {
 		if err := tp.Shutdown(ctx); err != nil {
@@ -103,17 +106,23 @@ func setupTraces(ctx context.Context, exporter *otlp.Exporter) (func(), error) {
 }
 
 func setupMetrics(ctx context.Context, exporter *otlp.Exporter) (func(), error) {
-	pusher := controller.New(
+	mc := metriccontroller.New(
 		processor.New(simple.NewWithExactDistribution(), exporter),
-		controller.WithExporter(exporter),
-		controller.WithCollectPeriod(5*time.Second),
+		metriccontroller.WithExporter(exporter),
+		metriccontroller.WithCollectPeriod(5*time.Second),
+		metriccontroller.WithResource(webserverResource),
 	)
-	metricglobal.SetMeterProvider(pusher.MeterProvider())
+	metricglobal.SetMeterProvider(mc.MeterProvider())
+
+	// Capture runtime metrics
+	if err := runtime.Start(runtime.WithMinimumReadMemStatsInterval(time.Second)); err != nil {
+		panic(err)
+	}
 
 	// Handle this error in a sensible manner where possible
 	return func() {
-		if err := pusher.Stop(ctx); err != nil {
+		if err := mc.Stop(ctx); err != nil {
 			panic(err)
 		}
-	}, pusher.Start(ctx)
+	}, mc.Start(ctx)
 }
