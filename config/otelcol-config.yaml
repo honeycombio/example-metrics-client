@@ -1,5 +1,5 @@
 receivers:
-  hostmetrics: # documentation here: https://github.com/open-telemetry/opentelemetry-collector/blob/main/receiver/hostmetricsreceiver/README.md
+  hostmetrics:
     collection_interval: 1m
     scrapers:
       cpu:
@@ -9,17 +9,6 @@ receivers:
       memory:
       network:
       paging:
-  prometheus: # not required, but this provides metrics from opentelemetry-collector itself. Documentation here: https://github.com/open-telemetry/opentelemetry-collector/blob/main/docs/troubleshooting.md#metrics
-    config:
-      scrape_configs:
-        - job_name: "otelcol"
-          scrape_interval: 1m
-          static_configs:
-            - targets: ["0.0.0.0:8888"]
-          metric_relabel_configs:
-            - source_labels: [__name__]
-              regex: ".*grpc_io.*"
-              action: drop
   otlp:
     protocols:
       grpc:
@@ -35,7 +24,7 @@ processors:
 
 exporters:
   logging:
-    logLevel: info # set to "debug" if you'd like to see all your metrics logged to stdout too
+    logLevel: info
   otlp:
     endpoint: "api.honeycomb.io:443"
     headers:
@@ -45,7 +34,7 @@ exporters:
 service:
   pipelines:
     metrics:
-      receivers: [hostmetrics, prometheus, otlp]
+      receivers: [hostmetrics, otlp]
       processors: [batch, resource]
       exporters: [otlp, logging]
     traces:

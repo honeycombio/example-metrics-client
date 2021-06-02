@@ -10,6 +10,12 @@
     - name: Print all available facts
       ansible.builtin.debug:
         var: ansible_facts
+        verbosity: 2
+
+    - name: Assert that HNY_API_KEY exists
+      ansible.builtin.assert:
+        that: hny_api_key != ""
+        fail_msg: "HNY_API_KEY is not defined as an env variable!"
 
     - name: polyhedron server | copy built files
       copy: src=../build/polyhedron-server-linux-amd64 dest=/home/ubuntu/polyhedron owner=ubuntu group=ubuntu mode=0770

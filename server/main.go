@@ -9,6 +9,7 @@ import (
 	"github.com/justinian/dice"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/contrib/instrumentation/runtime"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/exporters/otlp"
@@ -55,33 +56,22 @@ func roll(w http.ResponseWriter, req *http.Request) {
 func main() {
 	ctx := context.Background()
 
-	driver := otlpgrpc.NewDriver(
-		otlpgrpc.WithInsecure(),                 // insecure because sending to localhost
-		otlpgrpc.WithEndpoint("localhost:4317"), // otel-collector running as agent on this host (4317 is the default grpc port)
-		otlpgrpc.WithHeaders(map[string]string{"ContentType": "application/grpc"}),
-	)
-
-	exporter, err := otlp.NewExporter(ctx, driver)
+	exporter, err := createMetricsExporter(ctx)
 	if err != nil {
 		panic(err)
 	}
 
-	bsp := sdktrace.NewBatchSpanProcessor(exporter)
-	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(bsp))
-	defer func() { _ = tp.Shutdown(ctx) }()
-
-	pusher := controller.New(
-		processor.New(simple.NewWithExactDistribution(), exporter),
-		controller.WithExporter(exporter),
-		controller.WithCollectPeriod(5*time.Second),
-	)
-	metricglobal.SetMeterProvider(pusher.MeterProvider())
-	if err = pusher.Start(ctx); err != nil {
+	shutdownTraces, err := setupTraces(ctx, exporter)
+	if err != nil {
 		panic(err)
 	}
+	defer shutdownTraces()
 
-	// Handle this error in a sensible manner where possible
-	defer func() { _ = pusher.Stop(ctx) }()
+	shutdownMetrics, err := setupMetrics(ctx, exporter)
+	if err != nil {
+		panic(err)
+	}
+	defer shutdownMetrics()
 
 	if err := runtime.Start(runtime.WithMinimumReadMemStatsInterval(time.Second)); err != nil {
 		panic(err)
@@ -91,4 +81,39 @@ func main() {
 	if err = http.ListenAndServe(":8090", nil); err != nil {
 		panic(err)
 	}
+}
+
+func createMetricsExporter(ctx context.Context) (*otlp.Exporter, error) {
+	return otlp.NewExporter(ctx, otlpgrpc.NewDriver(
+		otlpgrpc.WithInsecure(),                 // insecure because sending to localhost
+		otlpgrpc.WithEndpoint("localhost:4317"), // otel-collector running as agent on this host (4317 is the default grpc port)
+		otlpgrpc.WithHeaders(map[string]string{"ContentType": "application/grpc"}),
+	))
+}
+
+func setupTraces(ctx context.Context, exporter *otlp.Exporter) (func(), error) {
+	bsp := sdktrace.NewBatchSpanProcessor(exporter)
+	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(bsp))
+	otel.SetTracerProvider(tp)
+	return func() {
+		if err := tp.Shutdown(ctx); err != nil {
+			panic(err)
+		}
+	}, nil
+}
+
+func setupMetrics(ctx context.Context, exporter *otlp.Exporter) (func(), error) {
+	pusher := controller.New(
+		processor.New(simple.NewWithExactDistribution(), exporter),
+		controller.WithExporter(exporter),
+		controller.WithCollectPeriod(5*time.Second),
+	)
+	metricglobal.SetMeterProvider(pusher.MeterProvider())
+
+	// Handle this error in a sensible manner where possible
+	return func() {
+		if err := pusher.Stop(ctx); err != nil {
+			panic(err)
+		}
+	}, pusher.Start(ctx)
 }
