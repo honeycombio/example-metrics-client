@@ -17,6 +17,8 @@ import (
 var tracer = otel.Tracer("polyhedron")
 var errorKey = attribute.Key("error")
 
+var requestList []string
+
 func serve() {
 	http.Handle("/", otelhttp.NewHandler(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		ctx := req.Context()
@@ -73,6 +75,9 @@ func handleDiceRoll(ctx context.Context, req *http.Request) (error, string) {
 	if reason != "" {
 		results = append(results, fmt.Sprintf("reason: %s", reason))
 	}
+
+	// silly memory leak here:
+	requestList = append(requestList, rollRequest)
 
 	return nil, strings.Join(results, ", ")
 }
