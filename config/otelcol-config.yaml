@@ -21,6 +21,9 @@ processors:
       - key: host.name
         value: $HOSTNAME
         action: upsert
+      - key: service.name
+        value: webserver
+        action: upsert
   batch:
     timeout: 200ms
   probabilistic_sampler:
