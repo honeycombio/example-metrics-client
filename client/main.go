@@ -17,6 +17,7 @@ func generateRollCommand() string {
 }
 
 func request() {
+	start := time.Now()
 	endpoint := fmt.Sprintf("http://polyhedron/%s", generateRollCommand())
 	resp, err := http.Get(endpoint)
 	if err != nil {
@@ -30,11 +31,13 @@ func request() {
 		fmt.Printf("Error: %v\n", err)
 		return
 	}
-	fmt.Printf("Result: %s\n", string(body))
+	t := time.Now()
+	elapsed := t.Sub(start)
+	fmt.Printf("%stime: %dms\n", string(body), elapsed.Milliseconds())
 }
 
 func main() {
-	concurrencyLimit := 15
+	concurrencyLimit := 10
 	semaphoreChan := make(chan struct{}, concurrencyLimit)
 	defer close(semaphoreChan)
 
@@ -42,7 +45,7 @@ func main() {
 		semaphoreChan <- struct{}{}
 		go func() {
 			request()
-			sleepTime := time.Duration(rand.Intn(1000)) * time.Millisecond
+			sleepTime := time.Duration(rand.Intn(1500)) * time.Microsecond
 			time.Sleep(sleepTime)
 			<-semaphoreChan
 		}()

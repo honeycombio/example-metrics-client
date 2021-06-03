@@ -9,9 +9,11 @@ receivers:
       memory:
       network:
       paging:
+      processes:
   otlp:
     protocols:
       grpc:
+        endpoint: 0.0.0.0:4317
 
 processors:
   resource:
@@ -21,23 +23,31 @@ processors:
         action: upsert
   batch:
     timeout: 200ms
+  probabilistic_sampler:
+    hash_seed: 22
+    sampling_percentage: 15
 
 exporters:
   logging:
-    logLevel: info
-  otlp:
+    logLevel: debug
+  otlp/traces:
     endpoint: "api.honeycomb.io:443"
     headers:
       "x-honeycomb-team": $HNY_API_KEY
-      "x-honeycomb-dataset": $HNY_DATASET_NAME
+      "x-honeycomb-dataset": ${HNY_DATASET_NAME}_traces
+  otlp/metrics:
+    endpoint: "api.honeycomb.io:443"
+    headers:
+      "x-honeycomb-team": $HNY_API_KEY
+      "x-honeycomb-dataset": ${HNY_DATASET_NAME}_metrics
 
 service:
   pipelines:
     metrics:
       receivers: [hostmetrics, otlp]
       processors: [batch, resource]
-      exporters: [otlp, logging]
+      exporters: [otlp/metrics, logging]
     traces:
       receivers: [otlp]
-      processors: [batch, resource]
-      exporters: [otlp, logging]
+      processors: [batch, resource, probabilistic_sampler]
+      exporters: [otlp/traces, logging]

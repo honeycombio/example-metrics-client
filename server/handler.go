@@ -25,7 +25,7 @@ func serve() {
 		w.Header().Add("Content-Type", "text/html")
 
 		if req.URL.Path == "/" {
-			fmt.Fprintf(w, "<h1>Welcome to polyhedron!</h1><p>Try <a href=\"/1d6\">/1d6</a></p>")
+			fmt.Fprint(w, "<h1>Welcome to polyhedron!</h1><p>Try <a href=\"/1d6\">/1d6</a></p>\n")
 			return
 		}
 
@@ -36,7 +36,7 @@ func serve() {
 			fmt.Fprint(w, err.Error())
 		} else {
 			w.WriteHeader(http.StatusOK)
-			fmt.Fprint(w, response)
+			fmt.Fprintf(w, "%s\n", response)
 		}
 	}), "handler"))
 	if err := http.ListenAndServe(":8090", nil); err != nil {

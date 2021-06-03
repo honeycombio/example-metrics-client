@@ -7,7 +7,7 @@ import (
 func main() {
 	ctx := context.Background()
 
-	exporter, err := createMetricsExporter(ctx)
+	exporter, err := createOTLPExporter(ctx)
 	if err != nil {
 		panic(err)
 	}
