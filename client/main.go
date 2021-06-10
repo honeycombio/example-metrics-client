@@ -45,7 +45,7 @@ func main() {
 		semaphoreChan <- struct{}{}
 		go func() {
 			request()
-			sleepTime := time.Duration(rand.Intn(2000)) * time.Millisecond
+			sleepTime := time.Duration(rand.Intn(2000)) * time.Microsecond
 			time.Sleep(sleepTime)
 			<-semaphoreChan
 		}()
