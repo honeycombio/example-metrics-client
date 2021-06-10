@@ -6,8 +6,7 @@ export GOOS=linux
 export GOARCH=amd64
 
 NAME=polyhedron
-ROOT_DIR="/Users/maxedmands/Projects/polyhedron"
-BUILD_DIR="$ROOT_DIR/build"
+BUILD_DIR="build"
 
 mkdir -p "$BUILD_DIR"
 
