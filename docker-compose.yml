@@ -1,0 +1,23 @@
+version: "2.4"
+
+services:
+  polyhedron:
+    build: ./server
+    ports:
+      - "127.0.0.1:8090:8090"
+    environment:
+      OTLP_ENDPOINT: otelcol:4317
+
+  loadgen:
+    build: ./client
+    environment:
+      POLYHEDRON_HOST: polyhedron:8090
+
+  otelcol:
+    image: otel/opentelemetry-collector-dev:latest
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./config/otelcol-config.yaml:/etc/otel-collector-config.yaml
+    environment:
+      HNY_API_KEY:
+      HNY_DATASET_NAME:

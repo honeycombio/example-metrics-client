@@ -45,3 +45,13 @@ HNY_API_KEY=????? ./deploy.bash
 ```
 go run client/main.go
 ```
+
+## Got Docker?
+
+Set HNY_API_KEY and HNY_DATASET_NAME environment variables.
+
+```
+docker compose up
+```
+
+If you've got [Tilt](https://tilt.dev/), `tilt up` will work, too!
