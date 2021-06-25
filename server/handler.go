@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 	"regexp"
 	"strings"
 
@@ -20,6 +21,10 @@ var errorKey = attribute.Key("error")
 var requestList []string
 
 func serve() {
+	var listen_addr = os.Getenv("LISTEN_ADDR")
+	if listen_addr == "" {
+		listen_addr = ":8090"
+	}
 	http.Handle("/", otelhttp.NewHandler(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		ctx := req.Context()
 		span := trace.SpanFromContext(ctx)
@@ -41,7 +46,7 @@ func serve() {
 			fmt.Fprintf(w, "%s\n", response)
 		}
 	}), "handler"))
-	if err := http.ListenAndServe(":8090", nil); err != nil {
+	if err := http.ListenAndServe(listen_addr, nil); err != nil {
 		panic(err)
 	}
 }
