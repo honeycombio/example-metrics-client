@@ -7,6 +7,7 @@ export GOARCH=amd64
 
 NAME=polyhedron
 BUILD_DIR="build"
+ROOT_DIR="."
 
 mkdir -p "$BUILD_DIR"
 

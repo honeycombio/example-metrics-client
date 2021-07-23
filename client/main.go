@@ -18,7 +18,7 @@ func generateRollCommand() string {
 
 func request() {
 	start := time.Now()
-	endpoint := fmt.Sprintf("http://polyhedron/%s", generateRollCommand())
+	endpoint := fmt.Sprintf("http://localhost:8090/%s", generateRollCommand())
 	resp, err := http.Get(endpoint)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
@@ -45,7 +45,7 @@ func main() {
 		semaphoreChan <- struct{}{}
 		go func() {
 			request()
-			sleepTime := time.Duration(rand.Intn(2000)) * time.Microsecond
+			sleepTime := time.Duration(rand.Intn(2000)) * time.Millisecond
 			time.Sleep(sleepTime)
 			<-semaphoreChan
 		}()

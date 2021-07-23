@@ -1,6 +1,6 @@
 receivers:
   hostmetrics:
-    collection_interval: 1m
+    collection_interval: 10s
     scrapers:
       cpu:
       disk:
@@ -34,12 +34,14 @@ exporters:
   logging:
     logLevel: debug
   otlp/traces:
-    endpoint: "api.honeycomb.io:443"
+    endpoint: "192.168.64.1:9090"
+    insecure: true
     headers:
       "x-honeycomb-team": $HNY_API_KEY
       "x-honeycomb-dataset": ${HNY_DATASET_NAME}_traces
   otlp/metrics:
-    endpoint: "api.honeycomb.io:443"
+    endpoint: "192.168.64.1:9090"
+    insecure: true
     headers:
       "x-honeycomb-team": $HNY_API_KEY
       "x-honeycomb-dataset": ${HNY_DATASET_NAME}_metrics

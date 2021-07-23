@@ -8,9 +8,10 @@ import (
 	"strings"
 
 	"github.com/justinian/dice"
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -19,8 +20,22 @@ var errorKey = attribute.Key("error")
 
 var requestList []string
 
+var rollResultRecorder metric.Int64ValueRecorder
+var rollQtyRecorder metric.Int64Counter
+
+func init() {
+	meter := global.Meter("httpHandler")
+	rollQtyRecorder = metric.Must(meter).NewInt64Counter("requests_received", metric.WithDescription("Measures number of requests received"))
+
+	var err error
+	rollResultRecorder, err = meter.NewInt64ValueRecorder("rollResult")
+	if err != nil {
+		panic(err)
+	}
+}
+
 func serve() {
-	http.Handle("/", otelhttp.NewHandler(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+	http.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		ctx := req.Context()
 		span := trace.SpanFromContext(ctx)
 
@@ -40,8 +55,8 @@ func serve() {
 			w.WriteHeader(http.StatusOK)
 			fmt.Fprintf(w, "%s\n", response)
 		}
-	}), "handler"))
-	if err := http.ListenAndServe(":8090", nil); err != nil {
+	}))
+	if err := http.ListenAndServe(":8092", nil); err != nil {
 		panic(err)
 	}
 }
@@ -68,6 +83,10 @@ func handleDiceRoll(ctx context.Context, req *http.Request) (error, string) {
 
 	span.SetAttributes(rollResultValueKey.Int(result.Int()))
 	span.SetAttributes(rollResultReasonKey.String(reason))
+
+	rollResultRecorder.Record(ctx, int64(result.Int()))
+	// rollQtyRecorder.Add(ctx, int64(1))
+	rollQtyRecorder.Add(ctx, 1, attribute.KeyValue{Key: "initial", Value: attribute.StringValue("increment")})
 
 	var results []string
 	results = append(results, fmt.Sprintf("roll: %s", result.Description()))

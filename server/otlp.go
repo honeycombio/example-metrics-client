@@ -4,11 +4,11 @@ import (
 	"context"
 	"time"
 
-	"go.opentelemetry.io/contrib/instrumentation/runtime"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpgrpc"
 	metricglobal "go.opentelemetry.io/otel/metric/global"
+	"go.opentelemetry.io/otel/sdk/export/metric"
 	metriccontroller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
@@ -16,11 +16,17 @@ import (
 )
 
 func createOTLPExporter(ctx context.Context) (*otlp.Exporter, error) {
-	return otlp.NewExporter(ctx, otlpgrpc.NewDriver(
-		otlpgrpc.WithInsecure(),                 // insecure because sending to localhost
-		otlpgrpc.WithEndpoint("localhost:4317"), // otel-collector running as agent on this host (4317 is the default grpc port)
-		otlpgrpc.WithHeaders(map[string]string{"ContentType": "application/grpc"}),
-	))
+	return otlp.NewExporter(
+		ctx,
+		otlpgrpc.NewDriver(
+			otlpgrpc.WithInsecure(),                 // insecure because sending to localhost
+			otlpgrpc.WithEndpoint("localhost:9197"), // otel-collector running as agent on this host (4317 is the default grpc port)
+			otlpgrpc.WithHeaders(map[string]string{
+				"ContentType": "application/grpc",
+			}),
+		),
+		otlp.WithMetricExportKindSelector(metric.DeltaExportKindSelector()),
+	)
 }
 
 func setupTraces(ctx context.Context, exporter *otlp.Exporter) (func(), error) {
@@ -39,16 +45,16 @@ func setupTraces(ctx context.Context, exporter *otlp.Exporter) (func(), error) {
 
 func setupMetrics(ctx context.Context, exporter *otlp.Exporter) (func(), error) {
 	mc := metriccontroller.New(
-		processor.New(simple.NewWithInexpensiveDistribution(), exporter),
-		metriccontroller.WithCollectPeriod(1*time.Minute),
+		processor.New(simple.NewWithHistogramDistribution(), exporter),
+		metriccontroller.WithCollectPeriod(time.Second),
 		metriccontroller.WithExporter(exporter),
 	)
 	metricglobal.SetMeterProvider(mc.MeterProvider())
 
-	// Capture runtime metrics
-	if err := runtime.Start(runtime.WithMinimumReadMemStatsInterval(time.Second)); err != nil {
-		panic(err)
-	}
+	// // Capture runtime metrics
+	// if err := runtime.Start(runtime.WithMinimumReadMemStatsInterval(time.Second)); err != nil {
+	// 	panic(err)
+	// }
 
 	// Handle this error in a sensible manner where possible
 	return func() {
