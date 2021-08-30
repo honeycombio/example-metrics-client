@@ -1,0 +1,68 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: polyhedron
+  labels:
+    app: polyhedron
+  namespace: basenji
+spec:
+  selector:
+    matchLabels:
+      app: polyhedron
+  template:
+    metadata:
+      labels:
+        app: polyhedron
+    spec:
+      containers:
+      - name: polyhedron
+        image: 702835727665.dkr.ecr.us-east-1.amazonaws.com/polyhedron:latest
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            cpu: 100m
+            memory: 256Mi
+        env:
+        - name: HONEYCOMB_API_KEY
+          valueFrom:
+            configMapKeyRef:
+              name: internal-bark-config
+              key: api_key
+        - name: HONEYCOMB_DATASET
+          valueFrom:
+            configMapKeyRef:
+              name: internal-bark-config
+              key: dataset_name
+        - name: OTLP_ENDPOINT
+          value: "opentelemetry-collector.basenji:4317"
+        - name: SERVICE_NAME
+          value: polyhedron
+        ports:
+        - name: otlp
+          containerPort: 4317
+          protocol: TCP
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: polyhedron
+  labels:
+    app: polyhedron
+  namespace: basenji
+spec:
+  selector:
+    app: polyhedron
+  ports:
+    - name: otlp
+      protocol: TCP
+      port: 4317
+      targetPort: 4317
+    - name: local
+      protocol: TCP
+      port: 8090
+      targetPort: 8090
