@@ -39,7 +39,7 @@ func setupTraces(ctx context.Context, exporter *otlp.Exporter) (func(), error) {
 
 func setupMetrics(ctx context.Context, exporter *otlp.Exporter) (func(), error) {
 	mc := metriccontroller.New(
-		processor.New(simple.NewWithInexpensiveDistribution(), exporter),
+		processor.New(simple.NewWithHistogramDistribution(), exporter),
 		metriccontroller.WithCollectPeriod(1*time.Minute),
 		metriccontroller.WithExporter(exporter),
 	)
