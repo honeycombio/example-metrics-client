@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"os"
 	"time"
 
 	"go.opentelemetry.io/contrib/instrumentation/runtime"
@@ -16,9 +17,13 @@ import (
 )
 
 func createOTLPExporter(ctx context.Context) (*otlp.Exporter, error) {
+	otlp_endpoint := os.Getenv("OTLP_ENDPOINT")
+	if otlp_endpoint == "" {
+		otlp_endpoint = "localhost:4317"
+	}
 	return otlp.NewExporter(ctx, otlpgrpc.NewDriver(
-		otlpgrpc.WithInsecure(),                 // insecure because sending to localhost
-		otlpgrpc.WithEndpoint("localhost:4317"), // otel-collector running as agent on this host (4317 is the default grpc port)
+		otlpgrpc.WithInsecure(),              // insecure because sending to localhost
+		otlpgrpc.WithEndpoint(otlp_endpoint), // otel-collector running as agent on this host (4317 is the default grpc port)
 		otlpgrpc.WithHeaders(map[string]string{"ContentType": "application/grpc"}),
 	))
 }
