@@ -7,18 +7,13 @@ import (
 func main() {
 	ctx := context.Background()
 
-	exporter, err := createOTLPExporter(ctx)
-	if err != nil {
-		panic(err)
-	}
-
-	shutdownTraces, err := setupTraces(ctx, exporter)
+	shutdownTraces, err := setupTraces(ctx)
 	if err != nil {
 		panic(err)
 	}
 	defer shutdownTraces()
 
-	shutdownMetrics, err := setupMetrics(ctx, exporter)
+	shutdownMetrics, err := setupMetrics(ctx)
 	if err != nil {
 		panic(err)
 	}

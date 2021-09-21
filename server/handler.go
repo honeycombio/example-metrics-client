@@ -39,8 +39,11 @@ func serve() {
 		} else {
 			w.WriteHeader(http.StatusOK)
 			fmt.Fprintf(w, "%s\n", response)
+			fmt.Println(req.URL.Path)
 		}
 	}), "handler"))
+
+	fmt.Println("Starting server on port 8090")
 	if err := http.ListenAndServe(":8090", nil); err != nil {
 		panic(err)
 	}

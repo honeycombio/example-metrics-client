@@ -5,6 +5,7 @@ import (
 	"io"
 	"math/rand"
 	"net/http"
+	"os"
 	"time"
 )
 
@@ -17,8 +18,13 @@ func generateRollCommand() string {
 }
 
 func request() {
+	host := os.Getenv("HOST")
+	if host == "" {
+		host = "http://polyhedron/"
+	}
+
 	start := time.Now()
-	endpoint := fmt.Sprintf("http://polyhedron/%s", generateRollCommand())
+	endpoint := fmt.Sprintf("%s/%s", host, generateRollCommand())
 	resp, err := http.Get(endpoint)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
